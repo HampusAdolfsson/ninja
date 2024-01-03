@@ -619,4 +619,38 @@ TEST_F(CleanDeadTest, CleanDeadPreservesInputs) {
   EXPECT_NE(0, fs_.Stat("out2", &err));
   log2.Close();
 }
+
+TEST_F(CleanTest, CleanDynamicOutputs) {
+  ASSERT_NO_FATAL_FAILURE(AssertParse(&state_,
+"rule cp-plus-bis\n"
+"  command = cp $in $out && cp $in $out.bis\n"
+"  dynout = $out.dynout\n"
+"build out: cp-plus-bis in\n"
+));
+  fs_.Create("out", "");
+  fs_.Create("out.bis", "");
+
+  string err;
+  DepsLog deps_log;
+  ASSERT_TRUE(deps_log.OpenForWrite("ninja_deps", &err));
+  ASSERT_EQ("", err);
+  Node* out = state_.LookupNode("out");
+  std::vector<Node*> nodes;
+  Node* out_bis = state_.GetNode("out.bis", 0);
+  nodes.push_back(out_bis);
+  deps_log.RecordDeps(out, 0, nodes, 1);
+
+  Cleaner cleaner(&state_, config_, &fs_, &deps_log);
+  EXPECT_EQ(0, cleaner.CleanAll());
+  EXPECT_EQ(2, cleaner.cleaned_files_count());
+  EXPECT_EQ(2u, fs_.files_removed_.size());
+
+  EXPECT_EQ(0, fs_.Stat("out", &err));
+  EXPECT_EQ(0, fs_.Stat("out.bis", &err));
+
+  deps_log.Close();
+  RealDiskInterface disk_interface;
+  disk_interface.RemoveFile("ninja_deps");
+}
+
 }  // anonymous namespace
