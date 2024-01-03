@@ -204,6 +204,8 @@ struct Edge {
 
   /// Like GetBinding("depfile"), but without shell escaping.
   std::string GetUnescapedDepfile() const;
+  /// Like GetBinding("dynout"), but without shell escaping.
+  std::string GetUnescapedDynout() const;
   /// Like GetBinding("dyndep"), but without shell escaping.
   std::string GetUnescapedDyndep() const;
   /// Like GetBinding("rspfile"), but without shell escaping.
@@ -275,8 +277,8 @@ struct EdgeCmp {
 
 typedef std::set<Edge*, EdgeCmp> EdgeSet;
 
-/// ImplicitDepLoader loads implicit dependencies, as referenced via the
-/// "depfile" attribute in build files.
+/// ImplicitDepLoader loads implicit dependencies and outputs, as referenced via
+/// the "depfile" and "dynout" attributes in build files.
 struct ImplicitDepLoader {
   ImplicitDepLoader(State* state, DepsLog* deps_log,
                     DiskInterface* disk_interface,
@@ -288,6 +290,11 @@ struct ImplicitDepLoader {
   /// @return false on error (without filling \a err if info is just missing
   //                          or out of date).
   bool LoadDeps(Edge* edge, std::string* err);
+
+  /// Load implicit outputs for \a edge.
+  /// @return false on error (without filling \a err if info is just missing
+  //                          or out of date).
+  bool LoadImplicitOutputs(Edge* edge, std::string* err);
 
   DepsLog* deps_log() const {
     return deps_log_;
@@ -307,6 +314,10 @@ struct ImplicitDepLoader {
   /// Load implicit dependencies for \a edge from the DepsLog.
   /// @return false on error (without filling \a err if info is just missing).
   bool LoadDepsFromLog(Edge* edge, std::string* err);
+
+  /// Load implicit outputs for \a edge from the DepsLog.
+  /// @return false on error (without filling \a err if info is just missing).
+  bool LoadOutputsFromLog(Edge* edge, std::string* err);
 
   /// Preallocate \a count spaces in the input array on \a edge, returning
   /// an iterator pointing at the first new space.
